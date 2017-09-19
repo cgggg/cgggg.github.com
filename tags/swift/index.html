@@ -4,7 +4,7 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
-  <title>Archives | Swift全栈教学</title>
+  <title>Tag: swift | Swift全栈教学</title>
   <meta name="description" content="学好敲代码，抱得美人归" />
   <meta name="HandheldFriendly" content="True" />
   <meta name="MobileOptimized" content="320" />
@@ -44,30 +44,6 @@
   <article class="post">
     <header class="post-header">
       <span class="post-meta">
-      <time datetime="2017-08-18T07:35:39.000Z" itemprop="datePublished">
-          2017-08-18
-      </time>
-    
-</span>
-      <h2 class="post-title"><a href="/2017/08/18/middleware-error1/">Swift全栈教程6：中间件以及自定义的错误处理（上）</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        上一讲我们实现了完整的 RESTful 风格的路由，不过过程中也暴露了一些问题，比如当一个路由的处理过程中有多个 throws 方法时，使用 Vapor 自带的 Error 格式，你在前端看到的报错信息既不能友好地展示给用户，也不能推断出错误的原因从而有效地 debug，而且使用默认的错误处理会返回 Vapor.Abort.notFound 这样的错误信息，这会暴露服务端使用的框架是 Vapor，有可能会被心怀不轨的人利用。Vapor 
-      
-      </p>
-      
-      <p>
-          <a href="/2017/08/18/middleware-error1/" class="excerpt-link">阅读全文...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
       <time datetime="2017-08-10T07:06:19.000Z" itemprop="datePublished">
           2017-08-10
       </time>
@@ -98,42 +74,6 @@ func show(_ req: Request, festival: Festival) throws -&gt; ResponseRepresentable
       
       <p>
           <a href="/2017/08/10/whole-restful/" class="excerpt-link">阅读全文...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2017-08-08T10:06:34.000Z" itemprop="datePublished">
-          2017-08-08
-      </time>
-    
-    
-    | 
-    <a href='/tags/Vapor/'>Vapor</a>,
-    
-    <a href='/tags/Controller/'>Controller</a>,
-    
-    <a href='/tags/JSONRepresentable/'>JSONRepresentable</a>,
-    
-    <a href='/tags/ResponseRepresentable/'>ResponseRepresentable</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2017/08/08/controller/">Swift全栈教程4：实现一个 Controller 需要配置的协议</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        上一讲中我们实现了一套完整的 CRUD，Vapor 可以使用闭包风格的路由风格，不过当逻辑变得复杂的时候，还是推荐把代码写在控制器中，就像在客户端那样。不过 iOS 客户端的功能是多样化的，而服务端的一些功能是比较固定的，使用 Vapor 的控制器可以快速生成 RESTful 风格的路由。
-实际上的代码跟官方文档上有些出入，可能是官方文档没有更新的缘故。我在 Routes.swift 文件中注册了模板自带的 PostController
-      
-      </p>
-      
-      <p>
-          <a href="/2017/08/08/controller/" class="excerpt-link">阅读全文...</a>
       </p>
       
     </section>

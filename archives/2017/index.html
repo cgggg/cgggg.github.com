@@ -9,7 +9,7 @@
   <meta name="HandheldFriendly" content="True" />
   <meta name="MobileOptimized" content="320" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <link rel="stylesheet" href="/themes/highlight/styles/xcode.css">
   <link rel="stylesheet" type="text/css" href="/css/screen.css" />
   <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
 
@@ -20,6 +20,10 @@
   
 
   
+  <link rel="stylesheet"href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/xcode.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+  <script>hljs.initHighlightingOnLoad();</script>
 </head>
 
 
@@ -40,23 +44,209 @@
   <article class="post">
     <header class="post-header">
       <span class="post-meta">
-      <time datetime="2017-09-14T03:39:05.000Z" itemprop="datePublished">
-          2017-09-14
+      <time datetime="2017-08-18T07:35:39.000Z" itemprop="datePublished">
+          2017-08-18
       </time>
     
 </span>
-      <h2 class="post-title"><a href="/2017/09/14/hello-world/">Hello World</a></h2>
+      <h2 class="post-title"><a href="/2017/08/18/middleware-error1/">Swift全栈教程6：中间件以及自定义的错误处理（上）</a></h2>
     </header>
     <section class="post-excerpt">
       <p>
       
-        Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub.
-Quick StartCreate a new p
+        上一讲我们实现了完整的 RESTful 风格的路由，不过过程中也暴露了一些问题，比如当一个路由的处理过程中有多个 throws 方法时，使用 Vapor 自带的 Error 格式，你在前端看到的报错信息既不能友好地展示给用户，也不能推断出错误的原因从而有效地 debug，而且使用默认的错误处理会返回 Vapor.Abort.notFound 这样的错误信息，这会暴露服务端使用的框架是 Vapor，有可能会被心怀不轨的人利用。Vapor 
       
       </p>
       
       <p>
-          <a href="/2017/09/14/hello-world/" class="excerpt-link">阅读全文...</a>
+          <a href="/2017/08/18/middleware-error1/" class="excerpt-link">阅读全文...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2017-08-10T07:06:19.000Z" itemprop="datePublished">
+          2017-08-10
+      </time>
+    
+    
+    | 
+    <a href='/tags/swift/'>swift</a>,
+    
+    <a href='/tags/Vapor/'>Vapor</a>,
+    
+    <a href='/tags/restful/'>restful</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2017/08/10/whole-restful/">Swift全栈教程5：实现 Controller 的完整功能</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        在上一讲中，我们已经实现了 index 和 create 方法，并且爬了不少坑，这一讲来继续深入到剩余的 RESTful 路由中。首先是 show 路由，对应的是 show 方法，这个方法根据 id 返回对应的对象：
+func show(_ req: Request, festival: Festival) throws -&gt; ResponseRepresentable {
+    return festival
+}
+
+随着你所配
+      
+      </p>
+      
+      <p>
+          <a href="/2017/08/10/whole-restful/" class="excerpt-link">阅读全文...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2017-08-08T10:06:34.000Z" itemprop="datePublished">
+          2017-08-08
+      </time>
+    
+    
+    | 
+    <a href='/tags/Vapor/'>Vapor</a>,
+    
+    <a href='/tags/Controller/'>Controller</a>,
+    
+    <a href='/tags/JSONRepresentable/'>JSONRepresentable</a>,
+    
+    <a href='/tags/ResponseRepresentable/'>ResponseRepresentable</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2017/08/08/controller/">Swift全栈教程4：实现一个 Controller 需要配置的协议</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        上一讲中我们实现了一套完整的 CRUD，Vapor 可以使用闭包风格的路由风格，不过当逻辑变得复杂的时候，还是推荐把代码写在控制器中，就像在客户端那样。不过 iOS 客户端的功能是多样化的，而服务端的一些功能是比较固定的，使用 Vapor 的控制器可以快速生成 RESTful 风格的路由。
+实际上的代码跟官方文档上有些出入，可能是官方文档没有更新的缘故。我在 Routes.swift 文件中注册了模板自带的 PostController
+      
+      </p>
+      
+      <p>
+          <a href="/2017/08/08/controller/" class="excerpt-link">阅读全文...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2017-08-05T11:42:01.000Z" itemprop="datePublished">
+          2017-08-05
+      </time>
+    
+    
+    | 
+    <a href='/tags/swift/'>swift</a>,
+    
+    <a href='/tags/Vapor/'>Vapor</a>,
+    
+    <a href='/tags/CRUD/'>CRUD</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2017/08/05/basic-crud/">Swift全栈教程3：基础的CRUD</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        在上一讲中我们做好了数据库的配置，那么这一讲动起手来，准备接口的开发吧。因为数据是保存在 MySql 数据库中的，和许多后端框架一样（比如 Laravel 的 Migrate 命令），Vapor 为你提供了通过模型快速建表的方法。依旧通过协议扩展的方式：
+extension Festival:Preparation {
+    static func prepare(_ database: Database) throws {
+    
+      
+      </p>
+      
+      <p>
+          <a href="/2017/08/05/basic-crud/" class="excerpt-link">阅读全文...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2017-08-03T07:41:28.000Z" itemprop="datePublished">
+          2017-08-03
+      </time>
+    
+    
+    | 
+    <a href='/tags/swift/'>swift</a>,
+    
+    <a href='/tags/Vapor/'>Vapor</a>,
+    
+    <a href='/tags/database/'>database</a>,
+    
+    <a href='/tags/fluent/'>fluent</a>,
+    
+    <a href='/tags/mysql/'>mysql</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2017/08/03/model-database/">Swift全栈教程2：创建模型与数据库配置</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        上一讲中我们配置了一个基础的 Vapor 项目并且运行成功，http://localhost:8080/plaintext 是一个简单的路由，它的具体实现对应到目录工程中的 Sources &gt; App &gt; Routes.swift 文件：
+import Vapor
+extension Droplet {
+    func setupRoutes() throws {
+        get(&quot;hello&quot;
+      
+      </p>
+      
+      <p>
+          <a href="/2017/08/03/model-database/" class="excerpt-link">阅读全文...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2017-08-01T10:25:52.000Z" itemprop="datePublished">
+          2017-08-01
+      </time>
+    
+    
+    | 
+    <a href='/tags/mac/'>mac</a>,
+    
+    <a href='/tags/swift/'>swift</a>,
+    
+    <a href='/tags/Vapor/'>Vapor</a>,
+    
+    <a href='/tags/搭建/'>搭建</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2017/08/01/build-vapor/">Swift全栈教程1：搭建Vapor</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        在研究了 Swift 的几大服务端框架之后，我决定使用 Vapor 作为本教程的服务端框架。理由很简单：Vapor 灵活、简单，文档完善，工具库丰富，比较贴近生产环境。作为一个单线程的框架，虽然对性能有一定的影响，但是避免了写很多线程保护的代码，应付一般的应用足矣。本教程使用 Mac 作为开发工具。
+想要使用Vapor，首先要保证你的电脑中有 Swift 环境，你可以去 Swift 官博下载一个工具链的安装包，直接点击安装就可以。本文发
+      
+      </p>
+      
+      <p>
+          <a href="/2017/08/01/build-vapor/" class="excerpt-link">阅读全文...</a>
       </p>
       
     </section>

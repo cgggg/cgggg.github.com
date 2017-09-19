@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>Swift全栈教程5：实现 Controller 的完整功能 | Swift全栈教学</title>
+  <meta name="description" content="学好敲代码，抱得美人归" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/themes/highlight/styles/xcode.css">
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="Swift全栈教学">
+
+  
+  
+  
+
+  
+  <link rel="stylesheet"href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/xcode.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+  <script>hljs.initHighlightingOnLoad();</script>
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head"  style="background-image: url(http://haibian-wj-polar.oss-cn-beijing.aliyuncs.com/newcover.jpg)" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="http://haibian-wj-polar.oss-cn-beijing.aliyuncs.com/round_corner_image_by_atool-3.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">Swift全栈教学</h1>
+            <h2 class="blog-description">学好敲代码，抱得美人归</h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2017-08-10T07:06:19.000Z" itemprop="datePublished">
+          2017-08-10
+      </time>
+    
+    
+    | 
+    <a href='/tags/swift/'>swift</a>,
+    
+    <a href='/tags/Vapor/'>Vapor</a>,
+    
+    <a href='/tags/restful/'>restful</a>
+    
+    
+</span>
+    <h1 class="post-title">Swift全栈教程5：实现 Controller 的完整功能</h1>
+    <section class="post-content">
+      <p>在上一讲中，我们已经实现了 index 和 create 方法，并且爬了不少坑，这一讲来继续深入到剩余的 RESTful 路由中。首先是 show 路由，对应的是 show 方法，这个方法根据 id 返回对应的对象：</p>
+<pre><code class="swift">func show(_ req: Request, festival: Festival) throws -&gt; ResponseRepresentable {
+    return festival
+}
+</code></pre>
+<p>随着你所配置的协议越来越完整，你会发现后面的功能写起来越来越容易。上面的 show 方法是类型安全的，你需要在路由中写入 id 值，如果 id 不存在，会自动抛出错误。把 show 方法也加入到 Resource 中，注意 Resourse 中的参数是有默认值的，可以省略某些参数，但是参数的位置不能改变，你需要依次传入 index、store 和 show：</p>
+<pre><code class="swift">func makeResource() -&gt; Resource&lt;Festival&gt;{
+    return Resource(
+        index: index,
+        store: create,
+        show: show
+    )
+}
+</code></pre>
+<p>现在尝试请求 show 路由，如果请求的 id 是存在的，会返回对应的 Festival 的信息：</p>
+<p><img src="https://ws1.sinaimg.cn/large/006tKfTcly1fjou5pzbt4j31hk0juaak.jpg" alt=""></p>
+<p>如果你请求的 id 是不存在的，则会抛出一个 notFound 的错误，证明你的错误不是逻辑错误。接下来来看看 delete 和 clear 方法：</p>
+<pre><code class="swift">func delete(_ req: Request, festival: Festival) throws -&gt; ResponseRepresentable {
+    try festival.delete()
+    return Response(status: .ok)
+}
+
+func clear(_ req: Request) throws -&gt; ResponseRepresentable {
+    try Festival.makeQuery().delete()
+    return Response(status: .ok)
+}
+</code></pre>
+<p>delete 删除数据库中的某一行，而 clear 会删除整张表，所以 clear 要慎用。delete 和 clear 都需要调用 DELETE Request，delete 对应的路由是 /festivals/:id，clear 对应的路由是 /festivals。注意一下 clear 中第一次出现了 makeQuery 方法，对于熟悉服务端开发的读者应该都知道 Query 的概念。在路由中使用类型安全的写法只能针对单个的 Festival 对象，一旦你需要对多个 Festival 对象操作时，就需要先查表得到一个对象的集合，此时就需要使用 makeQuery 方法，makeQuery 是组合复杂的 where、join 以及 select 方法链的开端，后面我们会看到很多这类的方法。</p>
+<p>接下来讲解一下 update 与 replace 方法,把这两个方法放在一起讲是因为二者很相似。update 更新某条记录且只更新请求携带的参数对应的字段，请求没有携带的参数值保持原样。而 replace 方法是直接覆盖某条记录，请求中没有携带的字段会被直接置空。先来看一下 update 的实现：</p>
+<pre><code class="swift">func update(_ req: Request, festival: Festival) throws -&gt; ResponseRepresentable {
+    try festival.update(for: req)
+    try festival.save()
+    return festival
+}
+</code></pre>
+<p>注意这里调用的 festival 的 update 方法是未定义的，在使用传统的服务端框架时，经常会用到 Repository 模式，这就有点类似于移动端的 MVVM 了，我个人并不喜欢这样的模式，所以我提出了移动端的 <a href="http://blog.csdn.net/cg1991130/article/details/51116120" target="_blank" rel="external">“幽灵架构”</a>，采用协议的方式整合模型和视图的关系。回顾一下之前使用闭包路由时我们定义的 update 方法：</p>
+<pre><code class="swift">patch(&quot;festivals&quot;,Festival.parameter){ req in
+    let festival = try req.parameters.next(Festival.self)
+    let name = req.data[&quot;name&quot;]?.string ?? festival.name
+    let date = req.data[&quot;date&quot;]?.string  ?? festival.date
+    festival.name = name
+    festival.date = date
+    try festival.save()
+    return try festival.makeJSON()
+}
+</code></pre>
+<p>不同于之前的路由，不同对象的 update 行为是多样化的，要尽可能降低 Controller 中的代码量，保持 Controller 的一致性，所以 update 方法被传递到模型中定义，并且这个行为是受协议管理的：</p>
+<pre><code class="swift">extension Festival: Updateable {
+    public static var updateableKeys: [UpdateableKey&lt;Festival&gt;] {
+        return [
+            UpdateableKey(Festival.nameKey, String.self) { festival, name in
+                festival.name = name
+            },
+            UpdateableKey(Festival.dateKey, String.self) { festival, date in
+                festival.date = date
+            }
+        ]
+    }
+}
+</code></pre>
+<p>有点类似于 Laravel 中的 fillable 数组，不同于 fillable 的“约定优于配置”的思想，Updateable 在定义可修改的字段的同时，你可以对数据进行自由的处理，比如校验或者格式化数据，这里我们只做简单的赋值操作。此外由于 UpdateableKey 是个泛型的结构，也就意味着你在 Festival 的 update 操作中不能修改其他数据表，避免了复制粘贴忘记修改类型这样的错误出现。</p>
+<p>相比之下 update 方法的实现就显得很“单调”了，直接覆盖所有可修改的属性就行：</p>
+<pre><code class="swift">func replace(_ req: Request, festival: Festival) throws -&gt; ResponseRepresentable {
+    let new = try req.festival()
+    festival.name = new.name
+    festival.date = new.date
+    try festival.save()
+    return festival
+}
+</code></pre>
+<p>update 和 replace 都是类型安全的，访问的路由均为 /festivals/:id，根据 RESTful 规范，调用 update 方法时使用 PATCH 方法的请求，调用 replace 使用 PUT 方法的请求。</p>
+<p>那么基本的方法就全部实现了，最后更新一下 makeResource() 方法，把路由配置好：</p>
+<pre><code class="swift">func makeResource() -&gt; Resource&lt;Festival&gt;{
+    return Resource(
+        index: index,
+        store: create,
+        show: show,
+        update: update,
+        replace: replace,
+        destroy: delete,
+        clear: clear
+    )
+}
+</code></pre>
+<p>你可以在 postman 中自由尝试了，Vapor 的这套 RESTful 路由标准是类型安全的，很难在犯错的情况下通过编译。在下一讲中，我们将定义自己的错误处理以及熟悉 debug 的流程。</p>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>Cwift</h4>
+    <p>Swift 爱好者，《Swift：面向协议编程》、《Swift 开发手册：技巧与实战》作者，Swift.gg 翻译组成员。 个人微博：Cwift</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2017/08/10/whole-restful/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2017/08/10/whole-restful/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2017/08/10/whole-restful/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2017/08/18/middleware-error1/">
+        ← Swift全栈教程6：中间件以及自定义的错误处理（上）
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2017/08/08/controller/">
+        Swift全栈教程4：实现一个 Controller 需要配置的协议 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <h1 class="title"><a href="#disqus_comments" name="disqus_comments">Comments</a></h1>
+
+    
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">Swift全栈教学</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>Swift全栈教程6：中间件以及自定义的错误处理（上） | Swift全栈教学</title>
+  <meta name="description" content="学好敲代码，抱得美人归" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/themes/highlight/styles/xcode.css">
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="Swift全栈教学">
+
+  
+  
+  
+
+  
+  <link rel="stylesheet"href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/xcode.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+  <script>hljs.initHighlightingOnLoad();</script>
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head"  style="background-image: url(http://haibian-wj-polar.oss-cn-beijing.aliyuncs.com/newcover.jpg)" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="http://haibian-wj-polar.oss-cn-beijing.aliyuncs.com/round_corner_image_by_atool-3.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">Swift全栈教学</h1>
+            <h2 class="blog-description">学好敲代码，抱得美人归</h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2017-08-18T07:35:39.000Z" itemprop="datePublished">
+          2017-08-18
+      </time>
+    
+</span>
+    <h1 class="post-title">Swift全栈教程6：中间件以及自定义的错误处理（上）</h1>
+    <section class="post-content">
+      <p>上一讲我们实现了完整的 RESTful 风格的路由，不过过程中也暴露了一些问题，比如当一个路由的处理过程中有多个 throws 方法时，使用 Vapor 自带的 Error 格式，你在前端看到的报错信息既不能友好地展示给用户，也不能推断出错误的原因从而有效地 debug，而且使用默认的错误处理会返回 Vapor.Abort.notFound 这样的错误信息，这会暴露服务端使用的框架是 Vapor，有可能会被心怀不轨的人利用。Vapor 官方文档对错误处理的部分详见 HTTP &gt; Middleware &gt; Errors，本文参考了 <a href="http://khanlou.com/2017/07/errors-on-the-server/" target="_blank" rel="external">Khanlou 大神的文章</a> (这篇文章是基于 Vapor 1.5 的，2.0 中有很多改动，我踩了很多坑 T T 。文章我已经翻译好了，不过还没有校对，不久就会发布到 swift.gg 上)。</p>
+<p>Vapor 使用的错误类型是 AbortError（包含状态码和错误的消息），这个类型简单易用，但不是万能的。你的任务是把 AbortError 转换成一个 JSON，要实现这个步骤最好的方案是使用 Middleware（中间件）。所以不妨先来了解一下中间件，中间件在服务端开发中是个非常常见的概念，你可以用中间件封装一些工具型代码，对 Request 和 Reponse 中的数据做过滤操作，详情可以参考 Vapor 的文档目录 HTTP &gt; Middleware。这里先做一个简单了解，后面当我们讲到用户身份认证的时候会有非常多中间件的操作。</p>
+<p>首先试用一下文档中提到的版本中间件，新建一个 Middleware 目录以及 VersionMiddleware.swift 文件（记得 Targets 选择 App）。具体的代码如下：</p>
+<pre><code class="swift">import HTTP
+
+final class VersionMiddleware: Middleware {
+    func respond(to request: Request, chainingTo next: Responder) throws -&gt; Response {
+        let response = try next.respond(to: request)
+
+        response.headers[&quot;Version&quot;] = &quot;API v1.0&quot;
+
+        return response
+    }
+}
+</code></pre>
+<p>这个中间件的主要作用是向 Response 中添加版本信息，想要使用中间件，你需要在 Droplet 中注册，打开 Config+Setup.swift 文件，由于自带的 Post 示例没有中间件相关的内容，所以我们仿照 Provider 和 Model 的写法，新建一个管理中间件的方法：</p>
+<pre><code class="swift">private func setupMiddleware() {
+    addConfigurable(middleware: VersionMiddleware(), name: &quot;version&quot;)
+}
+</code></pre>
+<p>然后在启动方法 setup() 中调用它：</p>
+<pre><code class="swift">public func setup() throws {
+    // allow fuzzy conversions for these types
+    // (add your own types here)
+    Node.fuzzy = [Row.self, JSON.self, Node.self]
+
+    try setupProviders()
+    try setupPreparations()
+    setupMiddleware()
+}
+</code></pre>
+<p>最后别忘了在 Config &gt; droplet.json 中添加新增的 middleware：</p>
+<p><img src="https://ws3.sinaimg.cn/large/006tKfTcly1fjouqlo1bsj30ap0510sl.jpg" alt=""></p>
+<p>这代表你把该中间件应用到了全局，现在当你成功请求任何一个路由时，都会在 Response 的头部携带 Version 信息：</p>
+<p><img src="https://ws4.sinaimg.cn/large/006tKfTcly1fjour8ifysj30lg0cojrg.jpg" alt=""></p>
+<p>下面进入自定义错误处理的环节。创建一个 JSONErrorMiddleware.swift 文件，具体代码如下：</p>
+<pre><code class="swift">import HTTP
+
+public final class JSONErrorMiddleware: Middleware {
+
+    public func respond(to request: Request, chainingTo next: Responder) throws -&gt; Response {
+        do {
+            return try next.respond(to: request)
+        } catch let error as AbortError {
+            let response = Response(status: error.status)
+            var json = JSON()
+            try json.set(&quot;error&quot;,true)
+            try json.set(&quot;reason&quot;,error.reason)
+            try json.set(&quot;status&quot;,error.status.statusCode)
+            try json.set(&quot;metadata&quot;,error.metadata ?? &quot;无&quot;)
+            response.json = json
+            return response
+        }
+    }
+}
+</code></pre>
+<p>一定要注意向 JSON 写入字段，状态码要使用 error.status.statusCode，这个是诸如 404 这样的状态码，而 status 只是对象，你直接向 JSON 中传入对象会报错的。这个中间件会过滤 AbortError，然后输出新的 JSON 格式。和 Version 中间件一样，由于我们只对 Response 做处理，所以只需要执行 try next.respond(to: request) 即可。重复上面的步骤，注册这个中间件，取名“JSONError”，原则上要过滤所有的 AbortError，所以记得把中间件要添加到 droplet.json 中。</p>
+<p>上面的中间件负责修改错误的 JSON 展示。新建一个 Error.swift 文件专门用来定义自定义的错误类型，比如 404 这样的常见错误：</p>
+<pre><code class="swift">import Vapor
+import Debugging
+import HTTP
+
+struct ModelNotFoundError: AbortError {
+
+    let status = Status.notFound
+
+    var code: Int {
+        return status.statusCode
+    }
+
+     var reason: String
+
+    public init&lt;T&gt;(type: T) {
+        self.reason = &quot;找不到 \(type.self)&quot;
+    }
+}
+</code></pre>
+<p>有时候你需要先查找对象再做操作，比如我想要写一个查询语句，查询某个日期是否有对应的这就无法使用模板化的 RESTful 风格的路由，在 FestivalController 中定义一个新方法:</p>
+<pre><code class="swift">func find(_ req: Request) throws -&gt; ResponseRepresentable {
+    let date = try req.parameters.next(String.self)
+    guard let festival = try Festival.makeQuery().filter(&quot;date&quot;,.equals,date).first() 
+    else   {
+        throw ModelNotFoundError(type:Festival.self)
+    }
+    return festival
+}
+</code></pre>
+<p>然后注册路由，由于新路由不属于 Resource，所以得单独注册，你可以使用闭包来管理路由：</p>
+<pre><code class="swift">let fc = FestivalController()
+let festivals = grouped(&quot;festivals&quot;)
+festivals.get(&quot;date&quot;,String.parameter,handler:fc.find)
+</code></pre>
+<p>测试一下，因为是 Get 方法，所以你要查找“8月1日”时，需要把中文进行 urlEncode，在网站上 Encode 之后，用 postman 请求：</p>
+<p><img src="https://ws1.sinaimg.cn/large/006tKfTcly1fjoutqpaw8j31hw0laq3p.jpg" alt=""></p>
+<p>修改参数，以便抛出自定义的错误：</p>
+<p><img src="https://ws2.sinaimg.cn/large/006tKfTcly1fjouv1dja5j31hu0lyq3q.jpg" alt=""></p>
+<p>由于团建的原因，加上这一篇踩了不少坑，所以写了很久，下一篇会继续扩展错误。至于 Debug，我发现不用写测试用例，直接发起请求在 Xcode 中打断点就可以了- -。</p>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>Cwift</h4>
+    <p>Swift 爱好者，《Swift：面向协议编程》、《Swift 开发手册：技巧与实战》作者，Swift.gg 翻译组成员。 个人微博：Cwift</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2017/08/18/middleware-error1/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2017/08/18/middleware-error1/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2017/08/18/middleware-error1/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2017/08/10/whole-restful/">
+        Swift全栈教程5：实现 Controller 的完整功能 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <h1 class="title"><a href="#disqus_comments" name="disqus_comments">Comments</a></h1>
+
+    
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">Swift全栈教学</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

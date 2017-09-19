@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>Swift全栈教程2：创建模型与数据库配置 | Swift全栈教学</title>
+  <meta name="description" content="学好敲代码，抱得美人归" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/themes/highlight/styles/xcode.css">
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="Swift全栈教学">
+
+  
+  
+  
+
+  
+  <link rel="stylesheet"href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/xcode.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+  <script>hljs.initHighlightingOnLoad();</script>
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head"  style="background-image: url(http://haibian-wj-polar.oss-cn-beijing.aliyuncs.com/newcover.jpg)" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="http://haibian-wj-polar.oss-cn-beijing.aliyuncs.com/round_corner_image_by_atool-3.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">Swift全栈教学</h1>
+            <h2 class="blog-description">学好敲代码，抱得美人归</h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2017-08-03T07:41:28.000Z" itemprop="datePublished">
+          2017-08-03
+      </time>
+    
+    
+    | 
+    <a href='/tags/swift/'>swift</a>,
+    
+    <a href='/tags/Vapor/'>Vapor</a>,
+    
+    <a href='/tags/database/'>database</a>,
+    
+    <a href='/tags/fluent/'>fluent</a>,
+    
+    <a href='/tags/mysql/'>mysql</a>
+    
+    
+</span>
+    <h1 class="post-title">Swift全栈教程2：创建模型与数据库配置</h1>
+    <section class="post-content">
+      <p>上一讲中我们配置了一个基础的 Vapor 项目并且运行成功，<a href="http://localhost:8080/plaintext" target="_blank" rel="external">http://localhost:8080/plaintext</a> 是一个简单的路由，它的具体实现对应到目录工程中的 Sources &gt; App &gt; Routes.swift 文件：</p>
+<pre><code class="swift">import Vapor
+extension Droplet {
+    func setupRoutes() throws {
+        get(&quot;hello&quot;) { req in
+            var json = JSON()
+            try json.set(&quot;hello&quot;, &quot;world&quot;)
+            return json
+        }
+
+        get(&quot;plaintext&quot;) { req in
+            return &quot;Hello, world!&quot;
+        }
+
+        // response to requests to /info domain
+        // with a description of the request
+        get(&quot;info&quot;) { req in
+            return req.description
+        }
+        get(&quot;description&quot;) { req in return req.description }
+        try resource(&quot;posts&quot;, PostController.self)
+    }
+}
+</code></pre>
+<p> 在 Swift 中，任何对象都是独立的命名空间，你可以把这里的 Droplet 理解成整个服务端的“化身”，Droplet 的 setupRoutes 方法的作用是配置路由，你可以在这里配置简单的路由，以 plaintext 为例：</p>
+<pre><code class="swift">get(&quot;plaintext&quot;) { req in
+    return &quot;Hello, world!&quot;
+}
+</code></pre>
+<p> get 方法名表示该路由对应了一个 Get 请求，第一个参数是字符串，表示路由名称，尾闭包的参数 req 代表 Request 对象，在闭包中实现该次请求的逻辑。这种定义方式类似于 Laravel 中在 Route 上定义路由的策略。</p>
+<p>我在 《Swift 面向协议编程》 这本书的最后一章中展示了一个事件备忘的 Demo，书中的 Demo 使用的是本地数据，现在我准备使用 Vapor 为它编写一个 API，并且把数据保存在数据库中。顺便更新一下客户端的代码，引入更多的最佳实践，这部分内容会在后面的章节中介绍。</p>
+<p>首先来回顾一下客户端所展示的内容：节日和事件，这是两种异构的数据结构，我直接把客户端上的模型定义粘贴过来：</p>
+<pre><code class="swift">struct Festival{
+    var date = &quot;&quot;
+    var name = &quot;&quot;
+}
+struct Event{
+    var date = &quot;&quot;
+    var title = &quot;&quot;
+}
+</code></pre>
+<p>创建对应的文件，放到 Models 目录下，注意一下文件头部的引用，在 Vapor 中定义模型，需要引入：</p>
+<pre><code class="swift">import Vapor
+import FluentProvider
+import HTTP
+</code></pre>
+<p>Swift 对模型的操作都是通过扩展协议完成的，你可以参考 Post.swift 这个文件。Vapor 中的模型要比客户端中的模型复杂的多，首先为了匹配 Fluent，需要把模型定义成 class，并且遵守 Model 协议，然后实现下面的方法和构造器：</p>
+<pre><code class="swift">final class Festival:Model{
+    var date:String
+    var name:String
+    let storage = Storage()
+    /// 常规的构造器
+    init(date: String,name:String) {
+        self.date = date
+        self.name = name
+    }
+    // MARK: Fluent 序列化构造器
+    /// 通过这个构造器你可以使用数据库中的一行生成一个对应的对象
+    init(row: Row) throws {
+        date = try row.get(&quot;date&quot;)
+        name = try row.get(&quot;name&quot;)
+    }
+
+    // 把一个对象存储到数据库当中
+    func makeRow() throws -&amp;gt; Row {
+        var row = Row()
+        try row.set(&quot;date&quot;, date)
+        try row.set(&quot;name&quot;, name)
+        return row
+    }
+
+}
+</code></pre>
+<p>storage 用来保存模型的一些附加属性，比如它在数据库中的 id。虽然 Fluent 有专门的日期格式，但是对应的 Swift 类型是 Date+Time 的复杂格式，所以这里我们定义为 String 类型即可。在 Laravel 中，你可以通过 Migration 文件建立模型对应的数据库表，在 Vapor 中，你同样可以这样做，不过不是创建 Migration 文件，而是通过协议扩展的方式。不过默认的工程模板是不提供数据库连接服务的，你需要根据数据库方案选择对应的 Provider。</p>
+<p>这里我使用的是Mysql，所以选择 Vapor 官方提供的 <a href="https://docs.vapor.codes/2.0/mysql/package/" target="_blank" rel="external">MySQLProvider</a>。Vapor 对提供的 Provider 进行了分类，你可以选择预设功能完备的，也可选择比较基础的封装，以便对你的代码进行高度的自定义。这里我们选用预设功能完备的 Provider，打开工程的 Package.swift 文件，这是 Swift-Package-Manager（SPM）的通用文件，用来管理依赖，向其中添加新的 Provider，内容如下：</p>
+<pre><code class="swift">...
+dependencies: [
+    .Package(url: &quot;https://github.com/vapor/vapor.git&quot;, majorVersion: 2),
+    .Package(url: &quot;https://github.com/vapor/fluent-provider.git&quot;, majorVersion: 1),
+    //新增的 provider
+    .Package(url: &quot;https://github.com/vapor/mysql-provider.git&quot;, majorVersion: 2)
+],
+...
+</code></pre>
+<p>类似于 laravel 中的 Composer.json 文件。接下来在控制台执行 vapor fetch(这里跟文档不太一样，文档中写的是vapor update，但是 2.0 中没有这个命名)，把新的 Provider 集成到我们的项目中。如果不熟悉 Vapor 的命令，你可以直接输入 vapor，控制台会为你展示所有的 Vapor 命令，不得不说 Vapor 的命令真是超级简洁：</p>
+<p><img src="https://ws2.sinaimg.cn/large/006tNc79ly1fjomxmpw0aj30sa00yjr8.jpg" alt=""></p>
+<p>fetch 的过程比较久，完成之后，控制台显示如下：</p>
+<p> <img src="https://ws3.sinaimg.cn/large/006tNc79ly1fjomzidv98j30jo03gt8p.jpg" alt=""></p>
+<p>然后下一步一定一定不要忘了，重新生成 .xcodeproj 文件！：</p>
+<pre><code>vapor xcode -y
+</code></pre><p>这是新手最容易犯的错误，切记引入新的 Provider 的时候都需要重新生成 .xcodeproj 文件。没办法，谁叫我们使用的是 Xcode 呢，手动滑稽。现在在工程的 Dependencies 文件夹下，你可以找到 MySql 相关的库了：</p>
+<p><img src="https://ws2.sinaimg.cn/large/006tNc79ly1fjon0fje6kj306j02wq2s.jpg" alt=""></p>
+<p>现在相当于我们只是“下载”了新的 Provider，想要使用它，你还需要在系统中对 Provider 进行“注册”，以便你的系统能够加载这个 Provider。 Provider 的注册工作统一在 Config+Setup.swift 文件中进行，模板工程已经为你配置好了 FluentProvider，如法炮制就行。由于 Provider 不是系统原生的，所以需要在文件中先 import：</p>
+<pre><code class="swift">import MySQLProvider
+</code></pre>
+<p>然后在 setupProviders() 方法中加入新的 Provider：</p>
+<pre><code class="swift">private func setupProviders() throws {
+    try addProvider(FluentProvider.Provider.self)
+    try addProvider(MySQLProvider.Provider.self)
+}
+</code></pre>
+<p>接下来要做的就是配置数据库了，前提是你需要一个可用的 MySql 数据库。模板工程中是没有配置文件的，这需要你在 Config 目录下手动创建一个 mysql.json 文件（目前来说使用 Vapor 是需要手动创建一些文件的，命令行并不会帮你创建这些文件），文件的格式如下：</p>
+<p>{ “hostname”: “localhost”, “user”: “root”, “password”: “”, “database”: “vapor” }</p>
+<p>因为我们要存储中文，所以建库的时候记得选择数据库编码为 utf8！在此之后，还剩下重要的一个步骤，千万不要忘记！ 在此之后，还剩下重要的一个步骤，千万不要忘记！ 在此之后，还剩下重要的一个步骤，千万不要忘记！</p>
+<p>重要的事情说三遍，在后面的章节中你会使用 Fluent 提供的便捷方法来操作数据库，Fluent 默认会把数据保存在内存中，所以你需要把 Fluent 的数据驱动改为 mysql。打开 Config\fluent.json 文件，修改如下所示的地方（必须吐槽一下，这个太不明显了）：</p>
+<p><img src="https://ws2.sinaimg.cn/large/006tNc79ly1fjon1m7ry4j30jo09sjs9.jpg" alt=""></p>
+<p>数据库的配置就完成了，下一讲中我们会编写基本的 CRUD 接口。</p>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>Cwift</h4>
+    <p>Swift 爱好者，《Swift：面向协议编程》、《Swift 开发手册：技巧与实战》作者，Swift.gg 翻译组成员。 个人微博：Cwift</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2017/08/03/model-database/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2017/08/03/model-database/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2017/08/03/model-database/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2017/08/05/basic-crud/">
+        ← Swift全栈教程3：基础的CRUD
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2017/08/01/build-vapor/">
+        Swift全栈教程1：搭建Vapor →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <h1 class="title"><a href="#disqus_comments" name="disqus_comments">Comments</a></h1>
+
+    
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">Swift全栈教学</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>
